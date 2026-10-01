@@ -1,0 +1,16 @@
+{
+  "name": "Driver Geo Max",
+  "short_name": "Geo Max",
+  "description": "App di tracciamento e navigazione per la squadra",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
