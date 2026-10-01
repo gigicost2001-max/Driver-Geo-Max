@@ -7,7 +7,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Driver Geo Max</title>
     
-    <!-- COLLEGAMENTO ALL'ICONA E ALLA CONFIGURAZIONE APP NATIVA -->
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.svg">
     
@@ -29,7 +28,6 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
         #map { width: 100%; height: 100%; z-index: 1; }
 
-        /* NAVIGATORE E RICERCA */
         #searchContainer { position: absolute; top: 15px; left: 15px; right: 90px; z-index: 1000; }
         #searchInput { width: 100%; padding: 12px 15px; border-radius: 25px; border: 2px solid rgba(0,0,0,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 16px; outline: none; box-sizing: border-box; }
         #searchResults { list-style: none; margin: 5px 0 0 0; padding: 0; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 250px; overflow-y: auto; display: none; position: absolute; width: 100%; }
@@ -56,7 +54,6 @@
         #toastMsg { position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.85); color: white; padding: 12px 24px; border-radius: 30px; z-index: 2000; font-size: 14px; text-align: center; transition: bottom 0.4s ease; white-space: nowrap; font-weight: bold; }
         #toastMsg.show { bottom: 90px; } #toastMsg.alert { background: #dc3545; border: 2px solid white; }
 
-        /* MODALI */
         .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
         .modal-overlay.active { opacity: 1; visibility: visible; }
         .modal-content { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 80vh; overflow-y: auto; }
@@ -75,8 +72,8 @@
         .conflict-btn-group { display: flex; flex-direction: column; gap: 8px; }
         .conflict-btn-group button { padding: 10px; font-size: 14px; }
 
-        /* GRAFICA MAPPA */
-        .blue-dot { width: 16px; height: 16px; background-color: #007bff; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
+        .blue-dot { width: 18px; height: 18px; background-color: #007bff; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
+        .team-dot { width: 32px; height: 32px; background-color: #007bff; color: white; border: 2px solid white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); text-transform: uppercase; }
         .flag-icon { font-size: 26px; text-align: center; line-height: 26px; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5)); }
         
         .archive-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
@@ -84,7 +81,6 @@
         .delete-btn { background: #dc3545; color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-weight: bold; }
         .popup-del-btn { background: #28a745; color: white; border: none; padding: 6px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; margin-top: 5px; font-weight: bold; }
 
-        /* GESTIONE CERCHIE RECENTI */
         .recent-cerchia-btn { background: #e9ecef; border: 1px solid #ced4da; border-radius: 8px; padding: 10px; font-weight: bold; color: #495057; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .recent-cerchia-btn:active { background: #dee2e6; }
     </style>
@@ -111,7 +107,6 @@
         <button class="control-btn btn-archive" id="openArchiveBtn">🗂️ Archivio Condiviso</button>
     </div>
 
-    <!-- MODALE GESTIONE CERCHIE -->
     <div class="modal-overlay active" id="initModal">
         <div class="modal-content">
             <h3>Gestione Cerchie</h3>
@@ -127,8 +122,9 @@
             <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 5px 0;">
 
             <p style="font-size: 13px; text-align: center; margin: 0; color: #555;">Entra in una nuova cerchia:</p>
-            <input type="text" id="initCerchiaInput" class="modal-input" placeholder="Codice Cerchia..." autocapitalize="characters" autocorrect="off" spellcheck="false">
-            <button class="control-btn btn-sync" id="btnJoinInit" style="width: 100%;">Connetti</button>
+            <input type="text" id="initNameInput" class="modal-input" placeholder="Le tue Iniziali (es. MR)" maxlength="3" autocapitalize="characters">
+            <input type="text" id="initCerchiaInput" class="modal-input" placeholder="Codice Cerchia..." autocapitalize="characters" autocorrect="off" spellcheck="false" style="margin-top: 5px;">
+            <button class="control-btn btn-sync" id="btnJoinInit" style="width: 100%; margin-top: 5px;">Connetti al Team</button>
             
             <div id="recentCerchieContainer" style="display: none; margin-top: 5px;">
                 <p style="font-size: 13px; text-align: center; margin: 0 0 5px 0; color: #555;">Oppure accedi a una cerchia recente:</p>
@@ -139,7 +135,6 @@
         </div>
     </div>
 
-    <!-- MODALE TAPPE -->
     <div class="modal-overlay" id="noteModal">
         <div class="modal-content">
             <h3>Nuova Tappa</h3>
@@ -154,7 +149,6 @@
         </div>
     </div>
 
-    <!-- MODALE ARCHIVIO -->
     <div class="modal-overlay" id="archiveModal">
         <div class="modal-content">
             <h3>Archivio Percorsi</h3>
@@ -173,7 +167,6 @@
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     
     <script>
-        // --- 1. CONFIGURAZIONE FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyBnB_5Z8jbP22KLpiBkI9z6QLAy0O4yPBQ",
             authDomain: "driver-geo-max.firebaseapp.com",
@@ -188,8 +181,18 @@
         try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } 
         catch (e) { console.warn("Firebase offline"); }
 
-        function sanitizeInput(input) { return (typeof input === 'string') ? input.replace(/[<>]/g, '').trim().substring(0, 500) : ''; }
-        function sanitizeHtml(html) { return (typeof html === 'string') ? html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') : ''; }
+        // PROTEZIONE XSS E SANITIZZAZIONE AVANZATA
+        function sanitizeInput(input) { 
+            if (!input) return '';
+            return String(input).replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+            }).substring(0, 500); 
+        }
+
+        let myUserId = localStorage.getItem('geoUserId');
+        if (!myUserId) { myUserId = 'user_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('geoUserId', myUserId); }
+        let myInitials = localStorage.getItem('geoInitials') || '';
+        document.getElementById('initNameInput').value = myInitials;
 
         function distanceToSegmentMeters(p, a, b) {
             const cosLat = Math.cos((p[0] * Math.PI) / 180);
@@ -201,14 +204,15 @@
             return Math.hypot(P.x - (A.x + t * dx), P.y - (A.y + t * dy));
         }
 
-        // --- 2. SETUP MAPPA ---
         const map = L.map('map', { zoomControl: false }).setView([41.06, 16.92], 13);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
         const dataLayerGroup = L.layerGroup().addTo(map);
         const tempLayerGroup = L.layerGroup().addTo(map);
-        const userIcon = L.divIcon({ html: '<div class="blue-dot"></div>', className: '', iconSize: [22,22], iconAnchor: [11,11] });
+        const teamLayerGroup = L.layerGroup().addTo(map); 
+        
+        const userIcon = L.divIcon({ html: '<div class="blue-dot"></div>', className: '', iconSize: [24,24], iconAnchor: [12,12] });
         const destIcon = L.divIcon({ html: '🏁', className: 'flag-icon', iconSize: [30,30], iconAnchor: [15,30] });
         const noteIcon = L.divIcon({ html: '📌', className: 'flag-icon', iconSize: [30,30], iconAnchor: [15,30] });
         const blockIcon = L.divIcon({ html: '🚧', className: 'flag-icon', iconSize: [30,30], iconAnchor: [15,30] });
@@ -218,7 +222,7 @@
         let recentCerchie = JSON.parse(localStorage.getItem('geoRecentCerchie') || '[]');
         let localRoutes = JSON.parse(localStorage.getItem('geoRoutes') || '[]');
         let localBlocks = JSON.parse(localStorage.getItem('geoBlocks') || '[]');
-        let activeCerchiaRef = null; 
+        let activeCerchiaRef = null; let teamMarkers = {};
         
         let isRecording = false; let currentRoutePoints = []; let currentRouteNotes = []; let currentRouteLine = null;
         let blockMode = 0; let tempBlockStart = null; let tempBlockMarker = null;
@@ -228,13 +232,13 @@
 
         function showToast(msg, alert=false) {
             const t = document.getElementById('toastMsg');
-            t.innerText = sanitizeInput(msg); t.className = alert ? 'alert show' : 'show';
+            t.innerText = msg; t.className = alert ? 'alert show' : 'show';
             setTimeout(() => t.classList.remove('show'), alert ? 5000 : 3000);
         }
 
-        // --- 3. MOTORE GPS OTTIMIZZATO ---
         let globalWatchId = null;
         let lastCheckTime = 0;
+        let lastRadarSyncTime = 0;
 
         function avviaLocalizzazioneGlobale() {
             if (!navigator.geolocation) return showToast("GPS non supportato", true);
@@ -249,6 +253,14 @@
                     map.setView(latlng, 16); 
                 } else { 
                     userMarker.setLatLng(latlng); 
+                }
+
+                // RADAR (PULITO ED OTTIMIZZATO)
+                if (activeCerchia && db && myInitials && (now - lastRadarSyncTime > 5000)) {
+                    lastRadarSyncTime = now;
+                    db.ref(`cerchie/${activeCerchia}/users/${myUserId}`).set({
+                        lat: latlng[0], lng: latlng[1], initials: myInitials
+                    });
                 }
 
                 if (isRecording) {
@@ -279,13 +291,10 @@
                     }
                 }
             }, () => showToast("Attiva il GPS per la localizzazione", true), { 
-                enableHighAccuracy: true,
-                maximumAge: 3000,
-                timeout: 10000 
+                enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 
             });
         }
         
-        // --- 4. RICERCA E NAVIGAZIONE (NOMINATIM & OSRM) ---
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         let searchTimeout;
@@ -313,7 +322,7 @@
             searchResults.style.display = 'none'; searchInput.value = destName; searchInput.blur(); document.getElementById('cancelNavBtn').style.display = 'block';
             if (!userMarker) return showToast("Attendo posizione GPS...", true);
             showToast("Calcolo percorso...");
-            if (routingControl) map.removeControl(routingControl);
+            if (routingControl) { map.removeControl(routingControl); routingControl = null; }
             routingControl = L.Routing.control({
                 waypoints: [ userMarker.getLatLng(), L.latLng(destLat, destLng) ],
                 router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
@@ -322,12 +331,12 @@
             }).addTo(map);
         }
 
+        // FIX PULIZIA NAVIGATORE
         document.getElementById('cancelNavBtn').addEventListener('click', () => {
-            if (routingControl) map.removeControl(routingControl);
+            if (routingControl) { map.removeControl(routingControl); routingControl = null; }
             document.getElementById('cancelNavBtn').style.display = 'none'; searchInput.value = ''; showToast("Navigazione terminata.");
         });
 
-        // --- 5. CENTRALINO CERCHIE ---
         function renderCerchieUI() {
             const statusText = document.getElementById('currentCerchiaStatusText');
             const leaveBtnDiv = document.getElementById('leaveCerchiaDiv');
@@ -370,8 +379,13 @@
         document.getElementById('btnLeaveCerchia').addEventListener('click', () => { impostaUIOffline(); showToast("Sei uscito dalla cerchia. Modalità Offline."); });
 
         document.getElementById('btnJoinInit').addEventListener('click', () => {
+            const ini = sanitizeInput(document.getElementById('initNameInput').value.trim().toUpperCase());
+            if (ini.length < 1) return showToast("Inserisci le tue iniziali!");
+            myInitials = ini.substring(0, 3); localStorage.setItem('geoInitials', myInitials);
+            
             const codice = sanitizeInput(document.getElementById('initCerchiaInput').value.trim().toUpperCase());
-            if (codice.length < 3) return showToast("Codice troppo corto!");
+            if (codice.length < 3) return showToast("Codice Cerchia troppo corto!");
+            
             document.getElementById('initModal').classList.remove('active'); document.getElementById('initCerchiaInput').value = '';
             avviaSincronizzazione(codice); avviaLocalizzazioneGlobale();
         });
@@ -379,8 +393,11 @@
         document.getElementById('joinCerchiaMenuBtn').addEventListener('click', () => { document.getElementById('mainPanel').classList.remove('active'); renderCerchieUI(); document.getElementById('initModal').classList.add('active'); });
 
         function impostaUIOffline() {
-            if (activeCerchiaRef) { activeCerchiaRef.off(); activeCerchiaRef = null; }
-            activeCerchia = null; localStorage.removeItem('geoCerchia'); renderCerchieUI(); renderDatiLocali();
+            if (activeCerchiaRef) { 
+                if(db && myUserId) db.ref(`cerchie/${activeCerchia}/users/${myUserId}`).remove();
+                activeCerchiaRef.off(); activeCerchiaRef = null; 
+            }
+            activeCerchia = null; localStorage.removeItem('geoCerchia'); teamLayerGroup.clearLayers(); teamMarkers = {}; renderCerchieUI(); renderDatiLocali();
         }
 
         function renderDatiLocali() {
@@ -389,10 +406,10 @@
         }
 
         function renderRoute(route) {
-            L.polyline(route.points, { color: 'purple', weight: 4, opacity: 0.8 }).addTo(dataLayerGroup).bindPopup(sanitizeHtml(`<b>${sanitizeInput(route.name)}</b>`));
+            L.polyline(route.points, { color: 'purple', weight: 4, opacity: 0.8 }).addTo(dataLayerGroup).bindPopup(`<b>${sanitizeInput(route.name)}</b>`);
             if (route.notes) route.notes.forEach(n => {
-                let c = `<b>${sanitizeInput(n.text || 'Tappa')}</b>`; if (n.image) c += `<br><img src="${sanitizeInput(n.image)}">`;
-                L.marker([n.lat, n.lng], { icon: noteIcon }).addTo(dataLayerGroup).bindPopup(sanitizeHtml(c));
+                let c = `<b>${sanitizeInput(n.text || 'Tappa')}</b>`; if (n.image) c += `<br><img src="${n.image}">`;
+                L.marker([n.lat, n.lng], { icon: noteIcon }).addTo(dataLayerGroup).bindPopup(c);
             });
         }
 
@@ -405,9 +422,13 @@
 
         function avviaSincronizzazione(codice) {
             if (!db) { impostaUIOffline(); avviaLocalizzazioneGlobale(); return showToast("Offline mode.", true); }
-            if (activeCerchiaRef) { activeCerchiaRef.off(); activeCerchiaRef = null; }
+            if (activeCerchiaRef) { activeCerchiaRef.off(); activeCerchiaRef = null; teamLayerGroup.clearLayers(); teamMarkers = {}; }
+            
             activeCerchia = codice; localStorage.setItem('geoCerchia', codice); saveRecentCerchia(codice); renderCerchieUI(); showToast("Sincronizzazione..."); avviaLocalizzazioneGlobale();
             
+            // LA DISCONNESSIONE E' GESTITA DAL SERVER FIREBASE (Infallibile)
+            db.ref(`cerchie/${activeCerchia}/users/${myUserId}`).onDisconnect().remove();
+
             db.ref('cerchie/' + activeCerchia).once('value').then(snapshot => {
                 const cloudData = snapshot.val() || { blocks: {}, routes: {} }; localBlocks = []; localRoutes = [];
                 Object.entries(cloudData.blocks || {}).forEach(([id, val]) => { val.id = id; localBlocks.push(val); });
@@ -419,13 +440,30 @@
 
         function attivaAscoltoLive() {
             renderDatiLocali(); activeCerchiaRef = db.ref('cerchie/' + activeCerchia);
+            
             activeCerchiaRef.child('routes').on('child_added', s => { const r = s.val(); r.id = s.key; if (!localRoutes.some(x => x.id === r.id)) { localRoutes.push(r); localStorage.setItem('geoRoutes', JSON.stringify(localRoutes)); renderRoute(r); } });
             activeCerchiaRef.child('routes').on('child_removed', s => { localRoutes = localRoutes.filter(r => r.id !== s.key); localStorage.setItem('geoRoutes', JSON.stringify(localRoutes)); renderDatiLocali(); });
             activeCerchiaRef.child('blocks').on('child_added', s => { const b = s.val(); b.id = s.key; if (!localBlocks.some(x => x.id === b.id)) { b.notified = false; localBlocks.push(b); localStorage.setItem('geoBlocks', JSON.stringify(localBlocks)); renderBlock(b); } });
             activeCerchiaRef.child('blocks').on('child_removed', s => { localBlocks = localBlocks.filter(b => b.id !== s.key); localStorage.setItem('geoBlocks', JSON.stringify(localBlocks)); renderDatiLocali(); });
+            
+            // FIX RADAR: Pulizia intelligente dei fantasmi sincronizzata con il server
+            activeCerchiaRef.child('users').on('value', snapshot => {
+                const users = snapshot.val() || {}; 
+                for (let id in teamMarkers) {
+                    if (!users[id]) { teamLayerGroup.removeLayer(teamMarkers[id]); delete teamMarkers[id]; }
+                }
+                for (let id in users) {
+                    if (id === myUserId) continue;
+                    const u = users[id];
+                    if (teamMarkers[id]) { teamMarkers[id].setLatLng([u.lat, u.lng]); } 
+                    else {
+                        const icon = L.divIcon({ html: `<div class="team-dot">${sanitizeInput(u.initials)}</div>`, className: '', iconSize: [36,36], iconAnchor: [18,18] });
+                        teamMarkers[id] = L.marker([u.lat, u.lng], { icon: icon }).addTo(teamLayerGroup).bindPopup(`<b>Autista: ${sanitizeInput(u.initials)}</b>`);
+                    }
+                }
+            });
         }
 
-        // --- 6. AZIONI UTENTE (Disegno, Tappe, Blocchi) ---
         map.on('click', (e) => {
             document.getElementById('mainPanel').classList.remove('active');
             if (isAddingNoteMode) {
@@ -498,7 +536,6 @@
             }
         });
 
-        // --- 7. ARCHIVIO ---
         document.getElementById('openArchiveBtn').addEventListener('click', () => { document.getElementById('mainPanel').classList.remove('active'); renderArchiveUI(); document.getElementById('archiveModal').classList.add('active'); });
         document.getElementById('closeArchiveBtn').addEventListener('click', () => { document.getElementById('archiveModal').classList.remove('active'); });
         
