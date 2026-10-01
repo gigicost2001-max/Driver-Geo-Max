@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Driver Geo Max</title>
+    
+    <!-- CSP Ottimizzata: Protezione XSS, supporto OpenStreetMap e canali WebSocket Firebase -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://www.gstatic.com https://unpkg.com;
+        style-src 'self' 'unsafe-inline' https://unpkg.com;
+        img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com;
+        connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com 
+                    https://*.firebasedatabase.app wss://*.firebasedatabase.app 
+                    https://www.gstatic.com https://*.googleapis.com;
+    ">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+        #map { width: 100%; height: 100%; z-index: 1; }
+
+        #menuToggleBtn { position: absolute; top: 15px; right: 15px; z-index: 1000; background: white; border: 2px solid rgba(0,0,0,0.2); border-radius: 8px; padding: 10px 15px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; }
+        #cerchiaBadge { position: absolute; top: 15px; left: 15px; z-index: 1000; background: #6c757d; color: white; border-radius: 8px; padding: 8px 12px; font-weight: bold; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        .control-panel { position: absolute; top: 70px; right: 15px; z-index: 1000; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 12px; width: calc(100% - 60px); max-width: 300px; transform: translateY(-15px); opacity: 0; visibility: hidden; transition: all 0.3s ease; max-height: 80vh; overflow-y: auto; }
+        .control-panel.active { transform: translateY(0); opacity: 1; visibility: visible; }
+        
+        .control-btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; font-size: 15px; color: white; cursor: pointer; }
+        .btn-record { background-color: #007bff; } .btn-stop { background-color: #dc3545; }
+        .btn-note { background-color: #ffc107; color: #212529; } .btn-block { background-color: #fd7e14; }
+        .btn-archive { background-color: #6c757d; } .btn-sync { background-color: #28a745; }
+
+        #cancelBlockBtn { background: #fff; border: 2px solid #dc3545; border-radius: 8px; padding: 8px; font-size: 13px; color: #dc3545; font-weight: bold; cursor: pointer; display: none; text-align: center; }
+
+        #toastMsg { position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.85); color: white; padding: 12px 24px; border-radius: 30px; z-index: 2000; font-size: 14px; text-align: center; transition: bottom 0.4s ease; white-space: nowrap; font-weight: bold; }
+        #toastMsg.show { bottom: 30px; } #toastMsg.alert { background: #dc3545; border: 2px solid white; }
+
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 3000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 80vh; overflow-y: auto; }
+        .modal-content h3 { margin: 0; font-size: 18px; text-align: center; }
+        
+        .modal-input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; font-weight: bold; text-align: center; box-sizing: border-box; }
+        textarea { text-align: left; resize: none; height: 80px; font-weight: normal; }
+        .modal-buttons { display: flex; justify-content: space-between; gap: 10px; }
+        .modal-buttons button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-confirm { background: #28a745; } .btn-cancel { background: #6c757d; }
+        
+        .custom-file-upload { display: block; padding: 10px; background-color: #f8f9fa; border: 1px dashed #6c757d; border-radius: 8px; text-align: center; cursor: pointer; font-size: 14px; font-weight: bold; color: #495057; }
+        input[type="file"] { display: none; }
+        #photoPreview img { width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; }
+        
+        .conflict-btn-group { display: flex; flex-direction: column; gap: 8px; }
+        .conflict-btn-group button { padding: 10px; font-size: 14px; }
+
+        .blue-dot { width: 16px; height: 16px; background-color: #007bff; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
+        .flag-icon { font-size: 26px; text-align: center; line-height: 26px; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5)); }
+        .leaflet-popup-content img { max-width: 100%; max-height: 160px; border-radius: 6px; margin-top: 6px; }
+
+        .archive-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+        .archive-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .delete-btn { background: #dc3545; color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-weight: bold; }
+        .popup-del-btn { background: #28a745; color: white; border: none; padding: 6px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; margin-top: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+    <div id="cerchiaBadge">👤 Offline</div>
+    <button id="menuToggleBtn">⚙️ Menu</button>
+
+    <div class="control-panel" id="mainPanel">
+        <button class="control-btn btn-record" id="recordRouteBtn">🔴 Registra Percorso</button>
+        <button class="control-btn btn-note" id="addNoteBtn">📝 Aggiungi Tappa/Nota</button>
+        <button class="control-btn btn-block" id="blockRoadBtn">🚧 Segnala Interruzione</button>
+        <div id="cancelBlockBtn">❌ Annulla Segnalazione</div>
+        <button class="control-btn btn-sync" id="joinCerchiaMenuBtn">📡 Cerchia (Connetti/Cambia)</button>
+        <button class="control-btn btn-archive" id="openArchiveBtn">🗂️ Archivio Condiviso</button>
+    </div>
+
+    <!-- Modale Iniziale Cerchia -->
+    <div class="modal-overlay active" id="initModal">
+        <div class="modal-content">
+            <h3>Driver Geo Max</h3>
+            <p style="font-size: 14px; text-align: center; color: #555; margin: 0;">Usa l'app offline o unisciti a una cerchia per condividere la mappa in tempo reale.</p>
+            <input type="text" id="initCerchiaInput" class="modal-input" placeholder="ES. SQUADRA1" autocapitalize="characters" autocorrect="off" spellcheck="false">
+            <div class="conflict-btn-group">
+                <button class="btn-confirm" id="btnJoinInit">Connetti alla Cerchia</button>
+                <button class="btn-cancel" id="btnOfflineInit">Continua da Solo (Offline)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Tappa -->
+    <div class="modal-overlay" id="noteModal">
+        <div class="modal-content">
+            <h3>Nuova Tappa</h3>
+            <textarea id="noteText" placeholder="Descrizione del luogo..."></textarea>
+            <label for="notePhoto" class="custom-file-upload">📷 Scatta o carica foto</label>
+            <input type="file" id="notePhoto" accept="image/*" capture="environment">
+            <div id="photoPreview"></div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" id="cancelNoteBtn">Annulla</button>
+                <button class="btn-confirm" id="saveNoteBtn">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Conflitti -->
+    <div class="modal-overlay" id="conflictModal">
+        <div class="modal-content">
+            <h3>⚠️ Similitudine Rilevata</h3>
+            <p id="conflictDesc" style="font-size: 14px; text-align: center; margin: 0;"></p>
+            <div class="conflict-btn-group">
+                <button class="btn-record" id="btnKeepCloud" style="background:#007bff;">Usa quello della Cerchia</button>
+                <button class="btn-note" id="btnKeepLocal" style="background:#ffc107; color:#000;">Usa il Mio (Sovrascrivi)</button>
+                <button class="btn-archive" id="btnKeepBoth">Mantienili Entrambi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Archivio -->
+    <div class="modal-overlay" id="archiveModal">
+        <div class="modal-content">
+            <h3>Archivio Percorsi</h3>
+            <ul class="archive-list" id="archiveList"></ul>
+            <div class="modal-buttons">
+                <button class="btn-cancel" id="closeArchiveBtn">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastMsg"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // --- 1. CONFIGURAZIONE FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBnB_5Z8jbP22KLpiBkI9z6QLAy0O4yPBQ",
+            authDomain: "driver-geo-max.firebaseapp.com",
+            databaseURL: "https://driver-geo-max-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "driver-geo-max",
+            storageBucket: "driver-geo-max.firebasestorage.app",
+            messagingSenderId: "837223951164",
+            appId: "1:837223951164:web:0516f9e6832f77d1ae8c39"
+        };
+
+        let db = null;
+        try {
+            firebase.initializeApp(firebaseConfig); 
+            db = firebase.database(); 
+        } catch (e) {
+            console.warn("Inizializzazione Firebase fallita, fallback offline attivo.", e);
+        }
+
+        // --- 2. SISTEMA DEBOUNCING E RETRY ---
+        let saveTimeout;
+        function debouncedSave(key, data) {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                try {
+                    localStorage.setItem(key, JSON.stringify(data));
+                } catch (error) {
+                    console.error("Errore salvataggio localStorage:", error);
+                }
+            }, 500);
+        }
+
+        async function retryFirebaseOperation(operation, maxRetries = 3) {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    return await operation();
+                } catch (error) {
+                    if (attempt === maxRetries) {
+                        console.error(`Operazione fallita dopo ${maxRetries} tentativi:`, error);
+                        throw error;
+                    }
+                    const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        // --- 3. SANITIZZAZIONE E VALIDAZIONE ---
+        function sanitizeInput(input) {
+            if (typeof input !== 'string') return '';
+            return input.replace(/[<>]/g, '').replace(/javascript:/gi, '').replace(/on\w+=/gi, '').trim().substring(0, 500);
+        }
+        
+        function sanitizeHtml(html) {
+            if (typeof html !== 'string') return '';
+            return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').replace(/javascript:/gi, '').replace(/on\w+=/gi, '');
+        }
+        
+        function validateRouteData(route) {
+            if (!route || typeof route !== 'object' || !route.name || typeof route.name !== 'string') return false;
+            if (!Array.isArray(route.points) || route.points.length < 2) return false;
+            return true;
+        }
+        
+        function validateBlockData(block) {
+            if (!block || typeof block !== 'object') return false;
+            if (!Array.isArray(block.start) || block.start.length !== 2) return false;
+            if (!Array.isArray(block.end) || block.end.length !== 2) return false;
+            return true;
+        }
+        
+        function isValidImageUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            if (url.startsWith('data:image/')) return url.length < 1.5 * 1024 * 1024;
+            return url.startsWith('https://');
+        }
+
+        // --- 4. GEOMETRIA DISTANZA PUNTO - SEGMENTO STRADALE (METRI REALI) ---
+        function distanceToSegmentMeters(p, a, b) {
+            const cosLat = Math.cos((p[0] * Math.PI) / 180);
+            const toMeters = (pt) => ({
+                x: (pt[1] - p[1]) * cosLat * 111320,
+                y: (pt[0] - p[0]) * 110540
+            });
+            const P = { x: 0, y: 0 };
+            const A = toMeters(a);
+            const B = toMeters(b);
+            const dx = B.x - A.x, dy = B.y - A.y;
+            const len2 = dx * dx + dy * dy;
+            if (len2 === 0) return Math.hypot(P.x - A.x, P.y - A.y);
+            let t = ((P.x - A.x) * dx + (P.y - A.y) * dy) / len2;
+            t = Math.max(0, Math.min(1, t));
+            const projX = A.x + t * dx;
+            const projY = A.y + t * dy;
+            return Math.hypot(P.x - projX, P.y - projY);
+        }
+
+        // --- 5. SETUP MAPPA E LIVELLI ---
+        const map = L.map('map', { zoomControl: false }).setView([41.06, 16.92], 13);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+        const dataLayerGroup = L.layerGroup().addTo(map);
+        const tempLayerGroup = L.layerGroup().addTo(map);
+
+        const userIcon = L.divIcon({ html: '<div class="blue-dot"></div>', className: '', iconSize: [22,22], iconAnchor: [11,11] });
+        const noteIcon = L.divIcon({ html: '📌', className: 'flag-icon', iconSize: [30,30], iconAnchor: [15,30] });
+        const blockIcon = L.divIcon({ html: '🚧', className: 'flag-icon', iconSize: [30,30], iconAnchor: [15,30] });
+
+        // --- 6. STATO APPLICATIVO ---
+        let activeCerchia = localStorage.getItem('geoCerchia') || null;
+        let localRoutes = JSON.parse(localStorage.getItem('geoRoutes') || '[]').filter(validateRouteData);
+        let localBlocks = JSON.parse(localStorage.getItem('geoBlocks') || '[]').filter(validateBlockData);
+        
+        let conflictQueue = []; let currentConflict = null; let userMarker = null;
+        let activeCerchiaRef = null;
+        let isRecording = false; let watchId = null; let currentRoutePoints = []; let currentRouteNotes = []; let currentRouteLine = null;
+        let blockMode = 0; let tempBlockStart = null; let tempBlockMarker = null;
+        let isAddingNoteMode = false; let tempNoteLatLng = null; let tempNoteImage = null;
+
+        document.getElementById('menuToggleBtn').addEventListener('click', () => document.getElementById('mainPanel').classList.toggle('active'));
+
+        function showToast(msg, alert=false) {
+            const t = document.getElementById('toastMsg');
+            t.innerText = sanitizeInput(msg); 
+            t.className = alert ? 'alert show' : 'show';
+            setTimeout(() => t.classList.remove('show'), alert ? 5000 : 3000);
+        }
+
+        // --- 7. ACCESSO & ROUTING OFFLINE/ONLINE ---
+        if (activeCerchia) {
+            document.getElementById('initModal').classList.remove('active');
+            avviaSincronizzazione(activeCerchia);
+        } else {
+            renderDatiLocali();
+        }
+
+        document.getElementById('btnOfflineInit').addEventListener('click', () => {
+            document.getElementById('initModal').classList.remove('active');
+            impostaUIOffline();
+            renderDatiLocali();
+        });
+
+        document.getElementById('btnJoinInit').addEventListener('click', () => {
+            const codice = sanitizeInput(document.getElementById('initCerchiaInput').value.trim().toUpperCase());
+            if (codice.length < 3) return showToast("Codice troppo corto!");
+            document.getElementById('initModal').classList.remove('active');
+            avviaSincronizzazione(codice);
+        });
+
+        document.getElementById('joinCerchiaMenuBtn').addEventListener('click', () => {
+            document.getElementById('mainPanel').classList.remove('active');
+            if (activeCerchia) document.getElementById('initCerchiaInput').value = activeCerchia;
+            document.getElementById('initModal').classList.add('active');
+        });
+
+        function impostaUIOffline() {
+            if (activeCerchiaRef) { activeCerchiaRef.off(); activeCerchiaRef = null; }
+            activeCerchia = null;
+            localStorage.removeItem('geoCerchia');
+            document.getElementById('cerchiaBadge').innerText = "👤 Offline";
+            document.getElementById('cerchiaBadge').style.background = "#6c757d";
+        }
+
+        function pulisciMappa() { 
+            dataLayerGroup.clearLayers(); 
+            tempLayerGroup.clearLayers(); 
+        }
+
+        function renderDatiLocali() {
+            pulisciMappa();
+            localRoutes.forEach(r => renderRoute(r));
+            localBlocks.forEach(b => { b.notified = false; renderBlock(b); });
+        }
+
+        function renderRoute(route) {
+            if (!validateRouteData(route)) return;
+            L.polyline(route.points, { color: 'purple', weight: 4, opacity: 0.8 }).addTo(dataLayerGroup)
+                .bindPopup(sanitizeHtml(`<b>${sanitizeInput(route.name)}</b>`));
+            
+            if (route.notes) {
+                route.notes.forEach(note => {
+                    let content = `<b>${sanitizeInput(note.text || 'Tappa')}</b>`;
+                    if (note.image && isValidImageUrl(note.image)) {
+                        content += `<br><img src="${sanitizeInput(note.image)}" onerror="this.style.display='none'">`;
+                    }
+                    L.marker([note.lat, note.lng], { icon: noteIcon }).addTo(dataLayerGroup).bindPopup(sanitizeHtml(content));
+                });
+            }
+        }
+
+        function renderBlock(block) {
+            if (!validateBlockData(block)) return;
+            const line = L.polyline([block.start, block.end], { color: 'red', weight: 5, dashArray: '10, 10' }).addTo(dataLayerGroup);
+            const m1 = L.marker(block.start, { icon: blockIcon }).addTo(dataLayerGroup);
+            const m2 = L.marker(block.end, { icon: blockIcon }).addTo(dataLayerGroup);
+
+            const popupHtml = `<b>🚧 Tratto Interrotto</b><br><button class="popup-del-btn" onclick="deleteBlock('${block.id || ''}', ${block.start[0]}, ${block.start[1]})">🟢 Riapri Strada</button>`;
+            line.bindPopup(popupHtml); m1.bindPopup(popupHtml); m2.bindPopup(popupHtml);
+        }
+
+        // --- 8. LOGICA CLOUD FIREBASE CON RETRY ---
+        function avviaSincronizzazione(codice) {
+            if (!db) { 
+                impostaUIOffline(); 
+                renderDatiLocali(); 
+                return showToast("Firebase non configurato. Funzionamento Offline.", true); 
+            }
+
+            if (activeCerchiaRef) { activeCerchiaRef.off(); activeCerchiaRef = null; }
+            
+            activeCerchia = codice; 
+            localStorage.setItem('geoCerchia', codice);
+            document.getElementById('cerchiaBadge').innerText = `📡 Cerchia: ${codice}`;
+            document.getElementById('cerchiaBadge').style.background = "#28a745";
+            showToast("Sincronizzazione in corso...");
+
+            let syncTimeout = setTimeout(() => {
+                showToast("Connessione lenta. Mappa caricata offline.", true);
+                impostaUIOffline();
+                renderDatiLocali();
+            }, 10000);
+
+            db.ref('cerchie/' + activeCerchia).once('value')
+            .then(snapshot => {
+                clearTimeout(syncTimeout);
+                const cloudData = snapshot.val() || { blocks: {}, routes: {} };
+                trovaSimilitudini(cloudData);
+            })
+            .catch(() => {
+                clearTimeout(syncTimeout);
+                showToast("Errore di rete. Avvio offline.", true);
+                impostaUIOffline();
+                renderDatiLocali();
+            });
+        }
+
+        function trovaSimilitudini(cloudData) {
+            conflictQueue = [];
+            const cloudBlocksArr = Object.entries(cloudData.blocks || {}).map(([id, val]) => ({ id, ...val })).filter(validateBlockData);
+            const cloudRoutesArr = Object.entries(cloudData.routes || {}).map(([id, val]) => ({ id, ...val })).filter(validateRouteData);
+
+            localBlocks.forEach(localBlock => {
+                const similarCloud = cloudBlocksArr.find(cb => map.distance(localBlock.start, cb.start) < 10);
+                if (similarCloud) conflictQueue.push({ tipo: 'blocco', localObj: localBlock, cloudObj: similarCloud });
+                else retryFirebaseOperation(() => db.ref('cerchie/' + activeCerchia + '/blocks').push(localBlock)).catch(() => {});
+            });
+
+            localRoutes.forEach(localRoute => {
+                const similarCloud = cloudRoutesArr.find(cr => cr.name.toLowerCase() === localRoute.name.toLowerCase());
+                if (similarCloud) conflictQueue.push({ tipo: 'percorso', localObj: localRoute, cloudObj: similarCloud });
+                else retryFirebaseOperation(() => db.ref('cerchie/' + activeCerchia + '/routes').push(localRoute)).catch(() => {});
+            });
+            gestisciProssimoConflitto();
+        }
+
+        function gestisciProssimoConflitto() {
+            if (conflictQueue.length === 0) {
+                localBlocks = []; localRoutes = [];
+                attivaAscoltoLive();
+                return showToast("Cerchia sincronizzata!");
+            }
+            currentConflict = conflictQueue.shift();
+            const desc = currentConflict.tipo === 'blocco' 
+                ? "Un tuo blocco a 10m coincide con uno già segnalato dalla cerchia." 
+                : `Il percorso "${sanitizeInput(currentConflict.localObj.name)}" esiste già.`;
+            document.getElementById('conflictDesc').innerText = desc;
+            document.getElementById('conflictModal').classList.add('active');
+        }
+
+        document.getElementById('btnKeepCloud').addEventListener('click', chiudiConflitto);
+        document.getElementById('btnKeepLocal').addEventListener('click', () => {
+            const path = currentConflict.tipo === 'blocco' ? '/blocks/' : '/routes/';
+            retryFirebaseOperation(() => db.ref('cerchie/' + activeCerchia + path + currentConflict.cloudObj.id).set(currentConflict.localObj)).catch(() => {});
+            chiudiConflitto();
+        });
+        document.getElementById('btnKeepBoth').addEventListener('click', () => {
+            const path = currentConflict.tipo === 'blocco' ? '/blocks' : '/routes';
+            if (currentConflict.tipo === 'percorso') currentConflict.localObj.name += " (Mio)";
+            retryFirebaseOperation(() => db.ref('cerchie/' + activeCerchia + path).push(currentConflict.localObj)).catch(() => {});
+            chiudiConflitto();
+        });
+        function chiudiConflitto() { 
+            document.getElementById('conflictModal').classList.remove('active'); 
+            gestisciProssimoConflitto(); 
+        }
+
+        function attivaAscoltoLive() {
+            pulisciMappa();
+            activeCerchiaRef = db.ref('cerchie/' + activeCerchia);
+            
+            activeCerchiaRef.child('routes').on('child_added', snapshot => {
+                const route = snapshot.val(); route.id = snapshot.key;
+                if (validateRouteData(route) && !localRoutes.some(r => r.id === route.id)) {
+                    localRoutes.push(route);
+                    debouncedSave('geoRoutes', localRoutes);
+                    renderRoute(route);
+                }
+            });
+            
+            activeCerchiaRef.child('routes').on('child_removed', snapshot => {
+                localRoutes = localRoutes.filter(r => r.id !== snapshot.key);
+                debouncedSave('geoRoutes', localRoutes);
+                renderDatiLocali();
+                if (document.getElementById('archiveModal').classList.contains('active')) renderArchiveUI();
+            });
+
+            activeCerchiaRef.child('blocks').on('child_added', snapshot => {
+                const block = snapshot.val(); block.id = snapshot.key;
+                if (validateBlockData(block) && !localBlocks.some(b => b.id === block.id)) {
+                    block.notified = false;
+                    localBlocks.push(block);
+                    debouncedSave('geoBlocks', localBlocks);
+                    renderBlock(block);
+                }
+            });
+
+            activeCerchiaRef.child('blocks').on('child_removed', snapshot => {
+                localBlocks = localBlocks.filter(b => b.id !== snapshot.key);
+                debouncedSave('geoBlocks', localBlocks);
+                renderDatiLocali();
+                showToast("Una strada è stata riaperta! 🟢");
+            });
+        }
+
+        // --- 9. GESTIONE NOTE & BLOCCHI SULLA MAPPA ---
+        map.on('click', (e) => {
+            document.getElementById('mainPanel').classList.remove('active');
+
+            if (isAddingNoteMode) {
+                tempNoteLatLng = e.latlng;
+                document.getElementById('noteText').value = ''; 
+                document.getElementById('notePhoto').value = '';
+                document.getElementById('photoPreview').innerHTML = ''; 
+                tempNoteImage = null;
+                document.getElementById('noteModal').classList.add('active');
+                isAddingNoteMode = false;
+            } 
+            else if (blockMode === 1) { 
+                tempBlockStart = e.latlng; 
+                tempBlockMarker = L.marker(tempBlockStart, { icon: blockIcon }).addTo(map); 
+                blockMode = 2; 
+                showToast("Tocca la FINE dell'interruzione 🚧"); 
+            } 
+            else if (blockMode === 2) {
+                const newBlock = { start: [tempBlockStart.lat, tempBlockStart.lng], end: [e.latlng.lat, e.latlng.lng] };
+                if (activeCerchia && db) { 
+                    retryFirebaseOperation(() => db.ref('cerchie/' + activeCerchia + '/blocks').push(newBlock))
+                    .then(() => showToast("Blocco stradale inviato alla cerchia!"))
+                    .catch(() => showToast("Errore di invio", true));
+                } else { 
+                    localBlocks.push(newBlock); 
+                    debouncedSave('geoBlocks', localBlocks); 
+                    renderBlock(newBlock); 
+                    showToast("Blocco salvato offline!"); 
+                }
+                blockMode = 0; tempBlockStart = null; 
+                document.getElementById('cancelBlockBtn').style.display = 'none';
+                if (tempBlockMarker) map.removeLayer(tempBlockMarker);
+            }
+        });
+
+        document.getElementById('addNoteBtn').addEventListener('click', () => {
+            isAddingNoteMode = true; 
+            document.getElementById('mainPanel').classList.remove('active');
+            showToast("Tocca la mappa per posizionare la tappa 📍");
+        });
+        
+        document.getElementById('cancelNoteBtn').addEventListener('click', () => { 
+            document.getElementById('noteModal').classList.remove('active'); 
+            tempNoteLatLng = null; 
+        });
+
+        document.getElementById('notePhoto').addEventListener('change', function(e) {
+            const file = e.target.files[0]; 
+            if (!file || !file.type.match('image.*')) return showToast("Seleziona una foto valida", true);
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas'); 
+                    const MAX_WIDTH = 500;
+                    let w = img.width, h = img.height;
+                    if (w > MAX_WIDTH) { h = Math.round((h * MAX_WIDTH) / w); w = MAX_WIDTH; }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    tempNoteImage = canvas.toDataURL('image/jpeg', 0.65);
+                    document.getElementById('photoPreview').innerHTML = `<img src="${tempNoteImage}">`;
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('saveNoteBtn').addEventListener('click', () => {
+            const text = sanitizeInput(document.getElementById('noteText').value);
+            if ((text !== '' || tempNoteImage) && tempNoteLatLng) {
+                const noteObj = { lat: tempNoteLatLng.lat, lng: tempNoteLatLng.lng, text, image: tempNoteImage };
+                currentRouteNotes.push(noteObj); 
+                
+                let content = `<b>${text || 'Tappa'}</b>`; 
+                if (tempNoteImage && isValidImageUrl(tempNoteImage)) content += `<br><img src="${sanitizeInput(tempNoteImage)}">`;
+                
+                L.marker(tempNoteLatLng, { icon: noteIcon }).addTo(tempLayerGroup).bindPopup(sanitizeHtml(content));
+                showToast("Tappa aggiunta al tragitto!");
+            }
+            document.getElementById('noteModal').classList.remove('active');
+        });
+
+        // --- 10. BLOCCHI STRADALI E REGISTRAZIONE GPS ---
+        document.getElementById('blockRoadBtn').addEventListener('click', () => {
+            blockMode = 1; 
+            document.getElementById('cancelBlockBtn').style.display = 'block';
+            document.getElementById('mainPanel').classList.remove('active'); 
+            showToast("Tocca l'INIZIO dell'interruzione 🚧");
+        });
+        
+        document.getElementById('cancelBlockBtn').addEventListener('click', () => {
+            blockMode = 0; tempBlockStart = null; 
+            if (tempBlockMarker) map.removeLayer(tempBlockMarker);
+            document.getElementById('cancelBlockBtn').style.display = 'none'; 
+            showToast("Segnalazione annullata.");
+        });
+
+        window.deleteBlock = function(id, startLat, startLng) {
+            if (confirm("Confermi di voler riaprire questa strada e togliere il blocco?")) {
+                if (activeCerchia && db && id) {
+                    retryFirebaseOperation(() => db.ref('cerchie/' + activeCerchia + '/blocks/' + id).remove())
+                    .then(() => showToast("Strada riaperta per la cerchia!"))
+                    .catch(() => showToast("Errore di connessione", true));
+                } else {
+                    localBlocks = localBlocks.filter(b => !(Math.abs(b.start[0] - startLat) < 0.0001 && Math.abs(b.start[1] - startLng) < 0.0001));
+                    debouncedSave('geoBlocks', localBlocks);
+                    renderDatiLocali();
+                    showToast("Blocco rimosso offline!");
+                }
+            }
+        };
+
+        const recordBtn = document.getElementById('recordRouteBtn');
+        recordBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                if (!navigator.geolocation) return showToast("GPS non supportato sul dispositivo", true);
+                
+                isRecording = true; 
+                recordBtn.innerText = "⏹️ Ferma e Salva"; 
+                recordBtn.classList.replace('btn-record', 'btn-stop');
+                document.getElementById('mainPanel').classList.remove('active');
+                
+                currentRoutePoints = []; currentRouteNotes = []; 
+                currentRouteLine = L.polyline([], { color: '#007bff', weight: 4 }).addTo(map);
+
+                watchId = navigator.geolocation.watchPosition((pos) => {
+                    const latlng = [pos.coords.latitude, pos.coords.longitude];
+                    if (currentRoutePoints.length === 0 || map.distance(latlng, currentRoutePoints[currentRoutePoints.length -1]) > 10) {
+                        currentRoutePoints.push(latlng); 
+                        currentRouteLine.setLatLngs(currentRoutePoints);
+                    }
+                    
+                    map.setView(latlng);
+                    if (!userMarker) userMarker = L.marker(latlng, { icon: userIcon }).addTo(map);
+                    else userMarker.setLatLng(latlng);
+                    
+                    // CONTROLLO BAN A MENO DI 10 METRI (Sull'intero tratto stradale)
+                    localBlocks.forEach(block => {
+                        const distToSegment = distanceToSegmentMeters(latlng, block.start, block.end);
+                        if (distToSegment < 10 && !block.notified) {
+                            showToast("⚠️ BAN: STRADA INTERROTTA A MENO DI 10m!", true);
+                            if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+                            block.notified = true;
+                        } else if (distToSegment > 30) {
+                            block.notified = false;
+                        }
+                    });
+                }, () => showToast("Segnale GPS debole o assente", true), { enableHighAccuracy: true });
+
+            } else {
+                isRecording = false; 
+                navigator.geolocation.clearWatch(watchId);
+                recordBtn.innerText = "🔴 Registra Percorso"; 
+                recordBtn.classList.replace('btn-stop', 'btn-record');
+                
+                if (currentRouteLine) map.removeLayer(currentRouteLine);
+                tempLayerGroup.clearLayers();
+                
+                if (currentRoutePoints.length > 1) {
+                    const rawName = prompt("Dai un nome al percorso registrato:", "Nuovo Viaggio");
+                    const name = sanitizeInput(rawName);
+                    
+                    if (name) {
+                        const newRoute = { name, points: currentRoutePoints, notes: currentRouteNotes };
+                        if (activeCerchia && db) {
+                            retryFirebaseOperation(() => db.ref('cerchie/' + activeCerchia + '/routes').push(newRoute))
+                            .then(() => showToast("Percorso inviato alla Cerchia! 🎉"))
+                            .catch(() => showToast("Errore invio cloud. Riprova.", true));
+                        } else {
+                            localRoutes.push(newRoute); 
+                            debouncedSave('geoRoutes', localRoutes);
+                            renderRoute(newRoute); 
+                            showToast("Percorso salvato offline!");
+                        }
+                    }
+                } else {
+                    showToast("Percorso troppo breve per essere salvato.");
+                    renderDatiLocali();
+                }
+            }
+        });
+        
+        // --- 11. ARCHIVIO ED ELIMINAZIONE DEI PERCORSI ---
+        document.getElementById('openArchiveBtn').addEventListener('click', () => {
+            document.getElementById('mainPanel').classList.remove('active'); 
+            renderArchiveUI();
+            document.getElementById('archiveModal').classList.add('active');
+        });
+        
+        document.getElementById('closeArchiveBtn').addEventListener('click', () => {
+             document.getElementById('archiveModal').classList.remove('active');
+        });
+
+        function renderArchiveUI() {
+            const archiveList = document.getElementById('archiveList'); 
+            archiveList.innerHTML = '';
+            
+            if (localRoutes.length === 0) {
+                archiveList.innerHTML = '<p style="text-align:center; color:#777;">Nessun percorso in memoria.</p>';
+                return;
+            }
+
+            localRoutes.forEach((route, index) => {
+                const li = document.createElement('li'); 
+                li.className = 'archive-item';
+                li.innerHTML = `
+                    <span><b>${sanitizeInput(route.name)}</b> (${route.points.length} pt)</span> 
+                    <button class="delete-btn" onclick="deleteRoute(${index})">Elimina</button>
+                `;
+                archiveList.appendChild(li);
+            });
+        }
+        
+        window.deleteRoute = function(index) {
+             if (confirm("Vuoi rimuovere questo percorso?")) {
+                const routeToDelete = localRoutes[index];
+                
+                if (activeCerchia && db && routeToDelete.id) {
+                    retryFirebaseOperation(() => db.ref('cerchie/' + activeCerchia + '/routes/' + routeToDelete.id).remove())
+                    .then(() => showToast("Percorso eliminato dalla Cerchia!"))
+                    .catch(() => showToast("Errore di rete. Riprova.", true));
+                } else {
+                    localRoutes.splice(index, 1);
+                    debouncedSave('geoRoutes', localRoutes);
+                    renderDatiLocali(); 
+                    renderArchiveUI(); 
+                    showToast("Percorso rimosso offline!");
+                }
+            }
+        };
+    </script>
+</body>
+</html>
