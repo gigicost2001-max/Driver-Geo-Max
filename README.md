@@ -1,5 +1,5 @@
 🚚 Driver Geo Max: Il Navigatore per il Lavoro di Squadra
-Driver Geo Max non è il solito navigatore per il tempo libero: è uno strumento di lavoro collaborativo creato su misura per corrieri, autisti e flotte logistiche.
+Driver Geo Max non è il solito navigatore per il tempo libero: è uno strumento di lavoro collaborativo creato da Luigi Costanzo su misura per corrieri, autisti e flotte logistiche.
 
 Mentre le app tradizionali (come Google Maps o Waze) sono pensate per il singolo guidatore, Driver Geo Max trasforma la tua flotta in una rete connessa. L'obiettivo è semplice: se un autista scopre un ostacolo, un vicolo cieco o un punto di consegna difficile, l'intera squadra lo sa in tempo reale, risparmiando tempo, carburante e stress.
 
