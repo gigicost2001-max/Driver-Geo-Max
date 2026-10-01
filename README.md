@@ -20,6 +20,7 @@ Devi mappare un nuovo giro di consegne per formare un collega assunto da poco? A
 Sei in una zona senza campo? Nessun problema. L'app continua a funzionare con la cache locale. Se segni un ostacolo mentre sei offline, questo verrà salvato sul tuo telefono e caricato sul server non appena ritroverai la linea.
 
 📱 Come Installarla in 30 Secondi
+https://gigicost2001-max.github.io/Driver-Geo-Max/
 Driver Geo Max è una PWA (Progressive Web App), il che significa che non serve passare dagli store perdendo tempo con password e aggiornamenti:
 
 Apri il link web dell'applicazione dal tuo smartphone.
